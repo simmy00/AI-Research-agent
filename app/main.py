@@ -44,9 +44,18 @@ async def get_status():
     """
     Check API server operational status and active RAG index document count.
     """
+    docs_detailed = []
+    for doc in rag_index.documents:
+        chunks_count = len([c for c in rag_index.chunks if c["document"] == doc])
+        docs_detailed.append({
+            "filename": doc,
+            "chunks_count": chunks_count,
+            "embedding_status": "Completed (TF-IDF & Semantic)"
+        })
+        
     return {
         "status": "online",
-        "active_documents": rag_index.documents,
+        "active_documents": docs_detailed,
         "indexed_chunks": len(rag_index.chunks)
     }
 

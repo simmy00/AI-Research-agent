@@ -121,6 +121,87 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
+    // --- Toast Notification Helper ---
+    function showToast(title, message, type = "success") {
+        let container = document.getElementById("toast-container");
+        if (!container) {
+            container = document.createElement("div");
+            container.id = "toast-container";
+            container.style.position = "fixed";
+            container.style.bottom = "24px";
+            container.style.right = "24px";
+            container.style.zIndex = "9999";
+            container.style.display = "flex";
+            container.style.flexDirection = "column";
+            container.style.gap = "12px";
+            document.body.appendChild(container);
+        }
+
+        const toast = document.createElement("div");
+        toast.className = `toast toast-${type}`;
+        
+        // Premium Glassmorphic Styles
+        toast.style.background = "rgba(18, 18, 18, 0.85)";
+        toast.style.backdropFilter = "blur(12px)";
+        toast.style.border = "1px solid rgba(255, 255, 255, 0.1)";
+        toast.style.borderRadius = "12px";
+        toast.style.padding = "16px 20px";
+        toast.style.minWidth = "300px";
+        toast.style.maxWidth = "400px";
+        toast.style.boxShadow = "0 8px 32px 0 rgba(0, 0, 0, 0.37)";
+        toast.style.color = "#ffffff";
+        toast.style.fontFamily = "var(--font-outfit), sans-serif";
+        toast.style.transform = "translateX(120%)";
+        toast.style.transition = "transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)";
+        
+        let borderGlow = "rgba(46, 204, 113, 0.6)"; // success green
+        let icon = "✅";
+        if (type === "error") {
+            borderGlow = "rgba(231, 76, 60, 0.6)";
+            icon = "❌";
+        } else if (type === "info") {
+            borderGlow = "rgba(52, 152, 219, 0.6)";
+            icon = "ℹ️";
+        }
+        toast.style.borderLeft = `4px solid ${borderGlow}`;
+
+        toast.innerHTML = `
+            <div style="display: flex; align-items: flex-start; gap: 12px;">
+                <span style="font-size: 1.2rem;">${icon}</span>
+                <div style="flex-grow: 1;">
+                    <div style="font-weight: 600; font-size: 0.9rem; margin-bottom: 4px;">${title}</div>
+                    <div style="font-size: 0.75rem; color: #d0d0d0; line-height: 1.4; white-space: pre-line;">${message}</div>
+                </div>
+                <button class="toast-close" style="background: none; border: none; color: #888; cursor: pointer; font-size: 0.8rem; padding: 0;">✕</button>
+            </div>
+        `;
+
+        container.appendChild(toast);
+
+        // Slide in
+        setTimeout(() => {
+            toast.style.transform = "translateX(0)";
+        }, 50);
+
+        // Close button handler
+        toast.querySelector(".toast-close").addEventListener("click", () => {
+            toast.style.transform = "translateX(120%)";
+            setTimeout(() => {
+                toast.remove();
+            }, 400);
+        });
+
+        // Auto remove
+        setTimeout(() => {
+            if (toast.parentNode) {
+                toast.style.transform = "translateX(120%)";
+                setTimeout(() => {
+                    toast.remove();
+                }, 400);
+            }
+        }, 6000);
+    }
+
     async function uploadFiles(files) {
         for (let i = 0; i < files.length; i++) {
             const file = files[i];
@@ -128,6 +209,7 @@ document.addEventListener("DOMContentLoaded", () => {
             formData.append("file", file);
             
             logTerminal("system", `[SYSTEM] Preparing to upload document context: ${file.name}...`);
+            showToast("Indexing Document", `📄 File: ${file.name}\n⚡ Processing text layers...`, "info");
             
             try {
                 const res = await fetch("/api/upload", {
@@ -138,12 +220,19 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (res.status === 200) {
                     const data = await res.json();
                     logTerminal("success", `[SYSTEM] Indexed successfully: ${data.message} (${data.chunks_created} vector chunks generated).`);
+                    showToast(
+                        "Document Indexed Successfully", 
+                        `📄 File: ${file.name}\n🧩 Chunks created: ${data.chunks_created}\n⚡ Embedding completed`, 
+                        "success"
+                    );
                 } else {
                     const err = await res.json();
                     logTerminal("error", `[SYSTEM] Upload failed for ${file.name}: ${err.detail}`);
+                    showToast("Upload Failed", `📄 File: ${file.name}\n❌ Error: ${err.detail}`, "error");
                 }
             } catch (e) {
                 logTerminal("error", `[SYSTEM] Connection error uploading file ${file.name}: ${e.message}`);
+                showToast("Connection Error", `📄 File: ${file.name}\n❌ Connection failed.`, "error");
             }
         }
         // Refresh index file list
@@ -160,21 +249,63 @@ document.addEventListener("DOMContentLoaded", () => {
         fileListContainer.style.display = "block";
         uploadedFilesUl.innerHTML = "";
         
-        filesList.forEach(filename => {
+        filesList.forEach(fileInfo => {
             const li = document.createElement("li");
+            li.style.display = "flex";
+            li.style.flexDirection = "column";
+            li.style.alignItems = "flex-start";
+            li.style.gap = "4px";
+            li.style.padding = "8px 12px";
+            li.style.borderRadius = "8px";
+            li.style.background = "rgba(255, 255, 255, 0.03)";
+            li.style.border = "1px solid rgba(255, 255, 255, 0.05)";
+            li.style.marginBottom = "8px";
+            
+            const headerDiv = document.createElement("div");
+            headerDiv.style.display = "flex";
+            headerDiv.style.justifyContent = "space-between";
+            headerDiv.style.width = "100%";
+            headerDiv.style.alignItems = "center";
             
             const nameSpan = document.createElement("span");
-            nameSpan.textContent = filename;
-            nameSpan.title = filename;
+            nameSpan.textContent = fileInfo.filename;
+            nameSpan.title = fileInfo.filename;
+            nameSpan.style.fontWeight = "500";
+            nameSpan.style.fontSize = "0.78rem";
+            nameSpan.style.overflow = "hidden";
+            nameSpan.style.textOverflow = "ellipsis";
+            nameSpan.style.whiteSpace = "nowrap";
+            nameSpan.style.maxWidth = "75%";
             
             const badgeSpan = document.createElement("span");
-            badgeSpan.textContent = "indexed";
+            badgeSpan.textContent = "Indexed";
             badgeSpan.style.color = "var(--accent-teal)";
-            badgeSpan.style.fontSize = "0.65rem";
-            badgeSpan.style.fontWeight = "600";
+            badgeSpan.style.fontSize = "0.6rem";
+            badgeSpan.style.fontWeight = "700";
+            badgeSpan.style.textTransform = "uppercase";
             
-            li.appendChild(nameSpan);
-            li.appendChild(badgeSpan);
+            headerDiv.appendChild(nameSpan);
+            headerDiv.appendChild(badgeSpan);
+            
+            const detailsDiv = document.createElement("div");
+            detailsDiv.style.display = "flex";
+            detailsDiv.style.justifyContent = "space-between";
+            detailsDiv.style.width = "100%";
+            detailsDiv.style.fontSize = "0.68rem";
+            detailsDiv.style.color = "rgba(255, 255, 255, 0.5)";
+            
+            const chunksSpan = document.createElement("span");
+            chunksSpan.textContent = `🧩 Chunks: ${fileInfo.chunks_count}`;
+            
+            const embSpan = document.createElement("span");
+            embSpan.textContent = `⚡ Embedding: Ready`;
+            embSpan.style.color = "#3498db";
+            
+            detailsDiv.appendChild(chunksSpan);
+            detailsDiv.appendChild(embSpan);
+            
+            li.appendChild(headerDiv);
+            li.appendChild(detailsDiv);
             uploadedFilesUl.appendChild(li);
         });
     }
