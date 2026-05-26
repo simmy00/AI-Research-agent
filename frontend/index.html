@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Research Assistant — Multi-Agent Workflow Engine</title>
+    <!-- Google Fonts: Outfit and Fira Code for developers -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="glass-bg-glows">
+        <div class="glow-orb orb-1"></div>
+        <div class="glow-orb orb-2"></div>
+    </div>
+    
+    <div class="app-container">
+        <!-- Sidebar Navigation & Settings Panel -->
+        <aside class="sidebar glass-panel">
+            <div class="brand">
+                <span class="brand-icon">🧠</span>
+                <div class="brand-text">
+                    <h1>Aegis Research</h1>
+                    <p>AI Innovation Lab</p>
+                </div>
+            </div>
+            
+            <div class="sidebar-section">
+                <h3 class="section-title">🔧 Model Configuration</h3>
+                <div class="setting-group">
+                    <label for="provider-select">Inference Provider</label>
+                    <select id="provider-select">
+                        <option value="gemini" selected>Google Gemini (Free Tier)</option>
+                        <option value="ollama">Ollama (Local LLM)</option>
+                    </select>
+                </div>
+
+                <!-- Gemini Config -->
+                <div id="gemini-config-group" class="setting-subgroup active">
+                    <label for="api-key-input">Gemini API Key</label>
+                    <div class="password-wrapper">
+                        <input type="password" id="api-key-input" placeholder="AIzaSy... (Get free key in Google AI Studio)">
+                        <button type="button" id="toggle-key-visibility" title="Toggle visibility">👁️</button>
+                    </div>
+                    <label for="gemini-model-select" style="margin-top: 10px;">Gemini Model</label>
+                    <select id="gemini-model-select">
+                        <option value="gemini-1.5-flash" selected>Gemini 1.5 Flash (Recommended)</option>
+                        <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
+                        <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
+                    </select>
+                </div>
+
+                <!-- Ollama Config -->
+                <div id="ollama-config-group" class="setting-subgroup">
+                    <label for="ollama-url-input">Ollama URL</label>
+                    <input type="text" id="ollama-url-input" value="http://localhost:11434">
+                    <label for="ollama-model-input" style="margin-top: 10px;">Model Identifier</label>
+                    <input type="text" id="ollama-model-input" placeholder="e.g., llama3, phi3" value="llama3">
+                </div>
+            </div>
+
+            <div class="sidebar-section">
+                <h3 class="section-title">📁 Retrieval Index (RAG)</h3>
+                <div class="upload-area" id="drop-zone">
+                    <span class="upload-icon">📤</span>
+                    <p>Drag & drop documents here or <span class="browse-link">browse</span></p>
+                    <input type="file" id="file-uploader" multiple style="display: none;" accept=".txt,.md,.pdf">
+                    <span class="file-formats">Supports .txt, .md, .pdf</span>
+                </div>
+                
+                <div id="file-list-container" class="file-list-container" style="display: none;">
+                    <div class="file-list-header">
+                        <span>Uploaded Contexts</span>
+                        <button id="clear-rag-btn" class="text-btn">Clear All</button>
+                    </div>
+                    <ul id="uploaded-files-ul"></ul>
+                </div>
+            </div>
+            
+            <div class="sidebar-footer">
+                <div class="status-indicator">
+                    <span class="indicator-dot active" id="server-status-dot"></span>
+                    <span class="status-text" id="server-status-text">Server Syncing...</span>
+                </div>
+                <div class="attribution">Assignment Proof-of-Concept</div>
+            </div>
+        </aside>
+
+        <!-- Main Workspace -->
+        <main class="main-content">
+            <!-- Top Search bar -->
+            <header class="workspace-header">
+                <div class="search-bar-container glass-panel">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" id="topic-query" placeholder="Enter research query (e.g., Deep Reinforcement Learning in Finance or Latest breakthrough in energy storage)...">
+                    <button id="run-research-btn" class="primary-btn">
+                        <span>Harvest Research</span>
+                        <div class="arrow-icon">➔</div>
+                    </button>
+                </div>
+            </header>
+
+            <div class="workspace-grid">
+                <!-- Left: Terminal & Report Viewer -->
+                <section class="left-panel">
+                    <!-- Agent Work Progress Monitor -->
+                    <div class="agent-monitor glass-panel" id="agent-monitor" style="display: none;">
+                        <div class="panel-header">
+                            <span class="panel-title-icon">🤖</span>
+                            <h2>Agent Co-Working Workspace</h2>
+                            <div class="pulse-loader"></div>
+                        </div>
+                        <div class="progress-bar-container">
+                            <div class="progress-bar-fill" id="progress-bar-fill" style="width: 0%"></div>
+                        </div>
+                        <div class="terminal-body" id="terminal-body">
+                            <p class="term-log system-log">[SYSTEM] Ready. Configure inference models on left and initiate research query.</p>
+                        </div>
+                    </div>
+
+                    <!-- Main Markdown Research Viewer -->
+                    <div class="report-viewer glass-panel" id="report-panel">
+                        <div class="panel-header">
+                            <span class="panel-title-icon">📄</span>
+                            <h2>Research Publication Workspace</h2>
+                            <div class="action-buttons" id="report-actions" style="display: none;">
+                                <button id="copy-markdown-btn" class="icon-btn" title="Copy Raw Markdown">📋</button>
+                                <button id="download-report-btn" class="icon-btn" title="Download Report (.md)">📥</button>
+                            </div>
+                        </div>
+                        <div class="report-body empty-state" id="report-body">
+                            <div class="empty-state-content">
+                                <span class="empty-icon">🔭</span>
+                                <h3>Explore Knowledge</h3>
+                                <p>Provide a query in the search bar above. Aegis' Multi-Agent network will map subtasks, retrieve live web contexts, index uploaded RAG fragments, and draft a high-fidelity formatted report here.</p>
+                                <div class="suggested-queries">
+                                    <span>Try searching:</span>
+                                    <button class="suggested-btn">Room-temperature superconductor breakthroughs</button>
+                                    <button class="suggested-btn">State of LLM multi-agent framework orchestration</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Right: Scraped Sources Citation Sidebar -->
+                <aside class="right-panel glass-panel" id="citations-panel">
+                    <div class="panel-header">
+                        <span class="panel-title-icon">🔗</span>
+                        <h2>Verified Sources & Citations</h2>
+                    </div>
+                    <div class="citations-body" id="citations-body">
+                        <div class="empty-citations">
+                            <p>No verified web citations retrieved yet. Sources will list here with search snippets when a research task is completed.</p>
+                        </div>
+                    </div>
+                </aside>
+            </div>
+        </main>
+    </div>
+</body>
+</html>
