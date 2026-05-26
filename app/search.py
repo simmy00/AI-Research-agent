@@ -1,4 +1,5 @@
 import logging
+import asyncio
 from typing import List, Dict
 import httpx
 from bs4 import BeautifulSoup
@@ -8,12 +9,10 @@ from duckduckgo_search import DDGS
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-def search_ddg(query: str, max_results: int = 5) -> List[Dict[str, str]]:
+def _search_ddg_sync(query: str, max_results: int = 5) -> List[Dict[str, str]]:
     """
-    Search DuckDuckGo using duckduckgo_search library.
-    No API Key required.
+    Synchronous DuckDuckGo search helper (runs in thread pool).
     """
-    logger.info(f"Searching DuckDuckGo for: '{query}'")
     try:
         with DDGS() as ddgs:
             results = ddgs.text(query, max_results=max_results)
@@ -28,8 +27,15 @@ def search_ddg(query: str, max_results: int = 5) -> List[Dict[str, str]]:
             return formatted_results
     except Exception as e:
         logger.error(f"Error during DuckDuckGo search: {e}")
-        # Fallback to empty list or mock results if DDG rate limits
         return []
+
+async def search_ddg(query: str, max_results: int = 5) -> List[Dict[str, str]]:
+    """
+    Async wrapper for DuckDuckGo search. Runs the blocking library
+    in a thread pool so it doesn't freeze the FastAPI event loop.
+    """
+    logger.info(f"Searching DuckDuckGo for: '{query}'")
+    return await asyncio.to_thread(_search_ddg_sync, query, max_results)
 
 async def scrape_url(url: str, timeout: int = 8) -> str:
     """

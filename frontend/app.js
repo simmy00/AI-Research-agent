@@ -416,66 +416,109 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!md) return "";
         let html = md;
 
-        // Escape HTML tags to protect rendering flow
+        // Step 1: Extract and protect code blocks before any processing
+        const codeBlocks = [];
+        html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (match, lang, code) => {
+            const placeholder = `%%CODEBLOCK_${codeBlocks.length}%%`;
+            // Escape HTML inside code blocks so they display literally
+            const escaped = code.trim()
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;");
+            codeBlocks.push(`<pre><code class="language-${lang}">${escaped}</code></pre>`);
+            return placeholder;
+        });
+
+        // Step 2: Escape inline code and protect it
+        const inlineCodes = [];
+        html = html.replace(/`([^`]+)`/g, (match, code) => {
+            const placeholder = `%%INLINECODE_${inlineCodes.length}%%`;
+            const escaped = code
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;");
+            inlineCodes.push(`<code>${escaped}</code>`);
+            return placeholder;
+        });
+
+        // Step 3: Now escape remaining HTML in the document body
         html = html.replace(/&/g, "&amp;")
                    .replace(/</g, "&lt;")
                    .replace(/>/g, "&gt;");
 
-        // Code block renderer
-        html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (match, lang, code) => {
-            return `<pre><code class="language-${lang}">${code.trim()}</code></pre>`;
-        });
+        // Step 4: Markdown transforms (order matters)
 
-        // Inline code renderer
-        html = html.replace(/`([^`]+)`/g, "<code>$1</code>");
-
-        // Bold and Italic renders
+        // Bold and Italic
         html = html.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
         html = html.replace(/\*([^*]+)\*/g, "<em>$1</em>");
 
-        // Blockquotes render
-        html = html.replace(/^\s*>\s+(.+)$/gm, "<blockquote>$1</blockquote>");
+        // Blockquotes (now matching &gt; since we escaped >)
+        html = html.replace(/^\s*&gt;\s+(.+)$/gm, "<blockquote>$1</blockquote>");
+        // Merge adjacent blockquotes
+        html = html.replace(/<\/blockquote>\n<blockquote>/g, "<br>");
 
-        // Tables renderer
-        // Handles standard Markdown tabular grids cleanly
-        html = html.replace(/^\s*\|(.+)\|$/gm, (match, rowContent) => {
-            const cells = rowContent.split("|").map(c => c.trim());
-            // Skip separators
-            if (cells.every(c => /^:-*:$/.test(c) || /^-+$/.test(c) || c === "")) {
-                return "";
-            }
-            const isHeader = cells.every(c => c !== "") && match.includes("th") || html.split("\n").indexOf(match) === 0; // simple header heuristic
-            const cellTag = "td"; // standard layout
-            
-            const cellHtml = cells.map(c => `<${cellTag}>${c}</${cellTag}>`).join("");
-            return `<tr>${cellHtml}</tr>`;
-        });
-        
-        // Wrap adjacent table rows in <table> elements
-        html = html.replace(/(<tr>[\s\S]*?<\/tr>)+/g, (match) => {
-            // Check if first row looks like a header (or can be treated as one)
-            let rows = match.trim();
-            // Optional: convert first row elements to th tags for design structure
-            rows = rows.replace(/^<tr>(<td>(.*?)<\/td>)+<\/tr>/, (headerRow) => {
-                return headerRow.replace(/<td>/g, "<th>").replace(/<\/td>/g, "</th>");
-            });
-            return `<table>${rows}</table>`;
-        });
+        // Horizontal rules
+        html = html.replace(/^\s*[-*_]{3,}\s*$/gm, "<hr>");
 
-        // Headers renders
+        // Headers (must come before paragraph wrapping)
+        html = html.replace(/^\s*####\s+(.+)$/gm, "<h4>$1</h4>");
         html = html.replace(/^\s*###\s+(.+)$/gm, "<h3>$1</h3>");
         html = html.replace(/^\s*##\s+(.+)$/gm, "<h2>$1</h2>");
         html = html.replace(/^\s*#\s+(.+)$/gm, "<h1>$1</h1>");
 
-        // Unordered lists renderer
-        html = html.replace(/^\s*[\-\*]\s+(.+)$/gm, "<li>$1</li>");
-        html = html.replace(/(<li>.*<\/li>)+/g, "<ul>$&</ul>");
+        // Tables: detect pipe-delimited rows
+        html = html.replace(/((?:^\s*\|.+\|[ \t]*$\n?)+)/gm, (tableBlock) => {
+            const rows = tableBlock.trim().split("\n").filter(r => r.trim());
+            if (rows.length < 2) return tableBlock;
 
-        // Clean double nested lists wrapping errors
+            let tableHtml = "<table>";
+            let isFirstDataRow = true;
+
+            for (let i = 0; i < rows.length; i++) {
+                const row = rows[i].trim();
+                // Extract cells between pipes
+                const cells = row.replace(/^\||\|$/g, "").split("|").map(c => c.trim());
+
+                // Skip separator rows (e.g., |---|---|)
+                if (cells.every(c => /^:?-+:?$/.test(c))) {
+                    continue;
+                }
+
+                const tag = isFirstDataRow ? "th" : "td";
+                tableHtml += "<tr>" + cells.map(c => `<${tag}>${c}</${tag}>`).join("") + "</tr>";
+                isFirstDataRow = false;
+            }
+            tableHtml += "</table>";
+            return tableHtml;
+        });
+
+        // Ordered lists
+        html = html.replace(/^(\s*)\d+\.\s+(.+)$/gm, "$1<li>$2</li>");
+
+        // Unordered lists
+        html = html.replace(/^\s*[-*]\s+(.+)$/gm, "<li>$1</li>");
+
+        // Wrap adjacent <li> in <ul>
+        html = html.replace(/((?:<li>.*<\/li>\s*)+)/g, "<ul>$1</ul>");
+        // Clean double-nested list wrappers
         html = html.replace(/<\/ul>\s*<ul>/g, "");
 
-        // Convert leftover single newlines to paragraphs
-        html = html.replace(/^\s*(?!<[a-z/]).+$/gm, "<p>$&</p>");
+        // Links: [text](url)
+        html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+
+        // Paragraphs: wrap lines that aren't already HTML elements
+        html = html.replace(/^(?!<[a-z/!]|%%)([ \t]*\S.+)$/gm, "<p>$1</p>");
+
+        // Step 5: Restore protected code blocks and inline codes
+        codeBlocks.forEach((block, i) => {
+            html = html.replace(`%%CODEBLOCK_${i}%%`, block);
+        });
+        inlineCodes.forEach((code, i) => {
+            html = html.replace(`%%INLINECODE_${i}%%`, code);
+        });
+
+        // Clean up excessive empty paragraphs and whitespace
+        html = html.replace(/<p>\s*<\/p>/g, "");
 
         return html;
     }

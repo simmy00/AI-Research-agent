@@ -126,7 +126,7 @@ class WebSearchAgent:
         user_query: str,
         config: Dict,
         progress_callback: Callable[[str, str], Awaitable[None]]
-    ) -> List[Dict]:
+    ) -> Dict:
         all_sources = []
         scraped_texts = []
         
@@ -157,7 +157,7 @@ class WebSearchAgent:
         # 2. Query DuckDuckGo for each query
         for q in queries:
             await progress_callback("searcher", f"🔍 Searching DuckDuckGo for: '{q}'...")
-            search_results = search_ddg(q, max_results=3)
+            search_results = await search_ddg(q, max_results=3)
             
             if not search_results:
                 await progress_callback("searcher", f"⚠️ No results returned for query: '{q}'")
