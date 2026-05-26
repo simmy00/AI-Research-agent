@@ -125,7 +125,11 @@ To experience the full power of the AI Research Assistant, perform the following
 5.  Your final report will have a dedicated section discussing details retrieved directly from your uploaded documents!
 
 ### Option C: Testing completely Locally (Ollama)
-1.  Start your local Ollama server (ensure a model like `llama3` or `phi3` is pulled: `ollama pull llama3`).
+1.  Start your local Ollama server and pull a lightweight model (we highly recommend **`qwen2.5:0.5b`** for blazingly fast CPU-only execution, or `qwen2.5:1.5b`):
+    ```bash
+    ollama pull qwen2.5:0.5b
+    ```
 2.  Select **Ollama (Local LLM)** in the provider dropdown.
-3.  Set your Ollama API endpoint (`http://localhost:11434`) and model name (`llama3`).
-4.  Click **Harvest Research** to run the complete agent pipeline locally on your CPU/GPU with 100% data privacy!
+3.  Set your Ollama API endpoint (`http://localhost:11434`) and model name (`qwen2.5:0.5b`).
+4.  Click **Harvest Research** to run the complete multi-agent pipeline locally on your CPU/GPU with 100% data privacy!
+
