@@ -56,7 +56,7 @@ async def call_llm(
             raise
 
     elif provider == "ollama":
-        model = model or "llama3"
+        model = model or "gemma3:4b"
         ollama_url = config.get("ollama_url", "http://localhost:11434").rstrip("/")
         url = f"{ollama_url}/api/generate"
         headers = {"Content-Type": "application/json"}
@@ -66,18 +66,26 @@ async def call_llm(
             "prompt": user_prompt,
             "stream": False,
             "options": {
-                "temperature": 0.2
+                "temperature": 0.2,
+                "num_predict": 2048
             }
         }
         
         try:
             async with httpx.AsyncClient() as client:
-                res = await client.post(url, json=payload, headers=headers, timeout=60.0)
+                res = await client.post(url, json=payload, headers=headers, timeout=600.0)
                 if res.status_code != 200:
-                    raise RuntimeError(f"Ollama API Error: Status {res.status_code}")
+                    error_body = res.text
+                    raise RuntimeError(f"Ollama API Error (Status {res.status_code}): {error_body}")
                 
                 response_json = res.json()
                 return response_json.get("response", "")
+        except httpx.TimeoutException:
+            raise RuntimeError(
+                f"Ollama request timed out ({model}). The model may be loading for the first time, "
+                "or your CPU is taking too long to generate. To fix this, run `ollama pull qwen2.5:0.5b` "
+                "or `ollama pull qwen2.5:1.5b` in your terminal and use that model identifier for a much faster execution."
+            )
         except Exception as e:
             logger.error(f"Error calling Ollama: {e}")
             raise

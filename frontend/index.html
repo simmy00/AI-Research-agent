@@ -32,13 +32,13 @@
                 <div class="setting-group">
                     <label for="provider-select">Inference Provider</label>
                     <select id="provider-select">
-                        <option value="gemini" selected>Google Gemini (Free Tier)</option>
-                        <option value="ollama">Ollama (Local LLM)</option>
+                        <option value="gemini">Google Gemini (Free Tier)</option>
+                        <option value="ollama" selected>Ollama (Local LLM)</option>
                     </select>
                 </div>
 
                 <!-- Gemini Config -->
-                <div id="gemini-config-group" class="setting-subgroup active">
+                <div id="gemini-config-group" class="setting-subgroup">
                     <label for="api-key-input">Gemini API Key</label>
                     <div class="password-wrapper">
                         <input type="password" id="api-key-input" placeholder="AIzaSy... (Get free key in Google AI Studio)">
@@ -53,11 +53,11 @@
                 </div>
 
                 <!-- Ollama Config -->
-                <div id="ollama-config-group" class="setting-subgroup">
+                <div id="ollama-config-group" class="setting-subgroup active">
                     <label for="ollama-url-input">Ollama URL</label>
                     <input type="text" id="ollama-url-input" value="http://localhost:11434">
                     <label for="ollama-model-input" style="margin-top: 10px;">Model Identifier</label>
-                    <input type="text" id="ollama-model-input" placeholder="e.g., llama3, phi3" value="llama3">
+                    <input type="text" id="ollama-model-input" placeholder="e.g., gemma3:4b, phi3" value="gemma3:4b">
                 </div>
             </div>
 
