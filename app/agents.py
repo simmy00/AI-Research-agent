@@ -56,7 +56,7 @@ async def call_llm(
             raise
 
     elif provider == "ollama":
-        model = model or "gemma3:4b"
+        model = model or "qwen2.5:0.5b"
         ollama_url = config.get("ollama_url", "http://localhost:11434").rstrip("/")
         url = f"{ollama_url}/api/generate"
         headers = {"Content-Type": "application/json"}
